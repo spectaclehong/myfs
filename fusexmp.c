@@ -47,7 +47,6 @@
 #endif
 #include <linux/limits.h>
 
-
 static struct {
   char driveA[512];
   char driveB[512];
@@ -64,9 +63,10 @@ static int xmp_getattr(const char *path, struct stat *stbuf)
 	res = lstat(fullpaths[0], stbuf);
 	if (res == -1)
 		return -errno;
-  res = lstat(fullpaths[1], &tmp);
-  stbuf->st_size += tmp.st_size;
-
+  if(!S_ISDIR(stbuf->st_mode)){
+    res = lstat(fullpaths[1], &tmp);
+    stbuf->st_size += tmp.st_size;
+  }
 	return 0;
 }
 
@@ -511,32 +511,34 @@ static int xmp_getxattr(const char *path, const char *name, char *value,
     size_t size)
 {
   char fullpaths[2][PATH_MAX];
-
+  int res = 0;
   sprintf(fullpaths[0], "%s%s", global_context.driveA, path);
   sprintf(fullpaths[1], "%s%s", global_context.driveB, path);
-
-  int res = lgetxattr(fullpaths[0], name, value, size);
-  if (res == -1)
-    return -errno;
-//  size_t siz;
-//  lgtxattr(fullpaths[1],name,value,&siz);
-//  *size+=siz;
+//  printf("getxattr : ");
+  for(int i=0;i<2;i++){
+    res += lgetxattr(fullpaths[0], name, value, size);
+//   printf("%d : %d, ",i,res);
+    if (res == -1)
+      return -errno;
+  }
+//  puts("");
   return res;
 }
 
 static int xmp_listxattr(const char *path, char *list, size_t size)
 {
   char fullpaths[2][PATH_MAX];
-
+  int res = 0;
   sprintf(fullpaths[0], "%s%s", global_context.driveA, path);
   sprintf(fullpaths[1], "%s%s", global_context.driveB, path);
-
-  int res = llistxattr(fullpaths[0], list, size);
-  if (res == -1)
-    return -errno;
-//  size_t siz;
-//  llistxattr(fullpaths[1],list,&siz);
-//  *size+=siz;
+//  printf("listxattr : ");
+  for(int i=0;i<2;i++){
+    res += llistxattr(fullpaths[0], list, size);
+//    printf("%d : %d, ",i,res); 
+    if (res == -1)
+      return -errno;
+  }
+//  puts("");
   return res;
 }
 
